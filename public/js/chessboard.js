@@ -61,26 +61,42 @@ function renderChessboard() {
             const pieceSrc = event.dataTransfer.getData('text/plain'); // get the img src
             const targetSquare = event.target.closest('.square'); // find the closest parent element with the class 'square' to
             if (targetSquare) {
-                let pieceElement = targetSquare.querySelector('img'); // check if there is already an img element inside the target square
-                if (pieceElement) {
-                    targetSquare.removeChild(pieceElement); // if there is, remove it to allow the new piece to be placed
-                } 
-                // create a new img after removing existing one (if any)
-                renderPiece(pieceSrc, targetSquare.dataset.index); // render the piece on the target square index
-                console.log(`Dropped piece on square: ${targetSquare.dataset.index}`);
+                // Only allow the drop if the move is valid according to chess rules
+                if(validateMove(convertIndexToPosition(event.dataTransfer.getData('source-square')), convertIndexToPosition(targetSquare.dataset.index)))
+                {
+                    let pieceElement = targetSquare.querySelector('img'); // check if there is already an img element inside the target square
+                    if (pieceElement) {
+                        targetSquare.removeChild(pieceElement); // if there is, remove it to allow the new piece to be placed
+                    } 
+                    // create a new img after removing existing one (if any)
+                    renderPiece(pieceSrc, targetSquare.dataset.index); // render the piece on the target square index
+                    console.log(`Dropped piece on square: ${targetSquare.dataset.index}`);
 
-                // REMOVE SRC PIECE
-                const sourceSquareIndex = event.dataTransfer.getData('source-square'); // we set this data in the dragstart event listener as 'source-square'
-                const sourceSquare = chessboard.children[sourceSquareIndex]; // get the source square using the index
-                if (sourceSquare) {
-                    const sourcePieceElement = sourceSquare.querySelector('img'); // find the img element inside the source square
-                    if (sourcePieceElement) {
-                        sourceSquare.removeChild(sourcePieceElement); // remove the img element from the source square
+                    // REMOVE SRC PIECE
+                    const sourceSquareIndex = event.dataTransfer.getData('source-square'); // we set this data in the dragstart event listener as 'source-square'
+                    const sourceSquare = chessboard.children[sourceSquareIndex]; // get the source square using the index
+                    if (sourceSquare) {
+                        const sourcePieceElement = sourceSquare.querySelector('img'); // find the img element inside the source square
+                        if (sourcePieceElement) {
+                            sourceSquare.removeChild(sourcePieceElement); // remove the img element from the source square
+                        }
                     }
-                }
-                console.log(`Dropped piece from square: ${sourceSquareIndex}`);
-                console.log(`Moved piece from square ${convertIndexToPosition(sourceSquareIndex)} to square ${convertIndexToPosition(targetSquare.dataset.index)}`);
+                    console.log(`Dropped piece from square: ${sourceSquareIndex}`);
+                    console.log(`Moved piece from square ${convertIndexToPosition(sourceSquareIndex)} to square ${convertIndexToPosition(targetSquare.dataset.index)}`);
+                    }
             }
+        });
+
+        chessboard.addEventListener('click', (event) => {
+            const targetSquare = event.target.closest('.square');
+            if (!targetSquare) {
+                return;
+            }
+            console.log(`Clicked on square: ${targetSquare.dataset.index}`);// smth like 55
+            showValidMoves(convertIndexToPosition(targetSquare.dataset.index)); // convert to a7 or smth before pasing
+            setTimeout(() => {
+                clearShading();
+            }, 1000);
         });
         }
     catch (error) {
@@ -124,6 +140,52 @@ function renderPiece(piece, position) {
    
 }
 
+function shadeValidSquare(position) {
+    try {
+        // passed a2,a3 ... here
+        index = convertPositionToIndex(position);
+        console.log(`Shading square at position: ${position} (index: ${index})`);
+        const chessboard = document.getElementById('chessboard');
+           if (!chessboard) {
+               console.error(`Error: Chessboard not found!`);
+               return;
+           }
+           const square = chessboard.children[index];
+           if (!square) {
+               console.error(`Error: Square at position ${index} not found!`);
+               return;
+           }
+           square.style.backgroundColor = 'rgba(126, 134, 126, 0.5)'; 
+    }
+    catch (error) {
+        console.error("Error rendering pieces:", error);
+    }
+   
+}
+
+function clearShading() {
+    try {
+        const chessboard = document.getElementById('chessboard');
+        if (!chessboard) {
+            console.error(`Error: Chessboard not found!`);
+            return;
+        }
+        const square = chessboard.children;
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+                if ((row + col) % 2 === 0) {
+                    square[row * 8 + col].style.backgroundColor =  '#f0d9b5';
+                } else {
+                    square[row * 8 + col].style.backgroundColor =  '#b58863';
+                }
+            }
+        }
+    }
+    catch (error) {
+        console.error("Error rendering pieces:", error);
+    }
+}
+
 function convertIndexToPosition(index) {
     const row = Math.floor(index / 8);
     const col = index % 8;
@@ -132,7 +194,35 @@ function convertIndexToPosition(index) {
     return `${file}${rank}`;
 }
 
+function convertPositionToIndex(position) {
+    const file = position[0];
+    const rank = parseInt(position[1], 10);
+    const col = file.charCodeAt(0) - 97;
+    const row = 8 - rank;
+    return row * 8 + col;
+}
+
 function loadPositionFromFEN(fen) {
     chess.load(fen);
     return chess.board();
+}
+
+function showValidMoves(position, turn) {
+    const validMoves = chess.moves({ square: position, verbose: true });
+    console.log(`Valid moves for ${position}:`, validMoves);
+    validMoves.forEach(move => {
+        //console.log(`Valid move: ${move.from} to ${move.to}`);// move.to is smth like a7, b8, etc
+        shadeValidSquare(move.to);
+    });
+}
+
+function validateMove(from, to) {
+    const isValid = chess.move({ from, to, promotion: 'q' }); // promotion is required for pawn moves
+    if (isValid) {
+        console.log(`Move from ${from} to ${to} is valid.`);
+        return true;
+    } else {
+        console.log(`Move from ${from} to ${to} is invalid.`);
+        return false;
+    }
 }
