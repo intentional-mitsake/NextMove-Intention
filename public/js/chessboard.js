@@ -1,3 +1,5 @@
+const chess = new Chess();
+
 const pixelSize = 80;
 const boardSize = 8 * pixelSize;
 
@@ -9,7 +11,7 @@ function renderChessboard() {
         chessboard.style.height = `${boardSize}px`;
         // gameScore.style.height = `${boardSize*1.2}px`;
         // gameScore.style.width = `${boardSize/3}px`;
-
+        const position = loadPositionFromFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 8; col++) {
                 const square = document.createElement('div');
@@ -21,9 +23,19 @@ function renderChessboard() {
                     square.classList.add('dark');
                 }
                 chessboard.appendChild(square);
+
+                //load the position
+                const piece = position[row][col]; // null if empty square
+                if (piece){ // true if there is a piece on the square
+                    const pieceColor = piece.color === 'w' ? 'w' : 'b'; // determine the color of the piece
+                    const pieceType = piece.type; // determine the type of the piece (p, r, n, b, q, k)
+                    const pieceImage = `assets/images/pieces-basic-svg/${pieceType}-${pieceColor}.svg`; // construct the image path based on the piece type and color
+                    const squareIndex = row * 8 + col; // pos to index conversion(0,0) -> 0, (0,1) -> 1, (1,0) -> 8, etc.
+                    renderPiece(pieceImage, squareIndex);
+                }
             }
         }
-        renderPieces('assets/images/pieces-basic-svg/rook-b.svg', 1); 
+        //renderPiece('assets/images/pieces-basic-svg/rook-b.svg', 1); 
 
         chessboard.addEventListener('dragstart', (event) => {
             const target = event.target; // target is the element being dragged--> the element that triggered the event
@@ -54,7 +66,7 @@ function renderChessboard() {
                     targetSquare.removeChild(pieceElement); // if there is, remove it to allow the new piece to be placed
                 } 
                 // create a new img after removing existing one (if any)
-                renderPieces(pieceSrc, targetSquare.dataset.index); // render the piece on the target square index
+                renderPiece(pieceSrc, targetSquare.dataset.index); // render the piece on the target square index
                 console.log(`Dropped piece on square: ${targetSquare.dataset.index}`);
 
                 // REMOVE SRC PIECE
@@ -80,7 +92,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
     renderChessboard();
 });
 
-function renderPieces(piece, position) {
+function renderPiece(piece, position) {
     try {
         const chessboard = document.getElementById('chessboard');
            if (!chessboard) {
@@ -118,4 +130,9 @@ function convertIndexToPosition(index) {
     const file = String.fromCharCode(97 + col); // Convert column to file (a-h)
     const rank = 8 - row; // Convert row to rank (1-8)
     return `${file}${rank}`;
+}
+
+function loadPositionFromFEN(fen) {
+    chess.load(fen);
+    return chess.board();
 }
