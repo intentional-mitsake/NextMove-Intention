@@ -67,6 +67,7 @@ function renderChessboard() {
                     }
                 }
                 console.log(`Dropped piece from square: ${sourceSquareIndex}`);
+                console.log(`Moved piece from square ${convertIndexToPosition(sourceSquareIndex)} to square ${convertIndexToPosition(targetSquare.dataset.index)}`);
             }
         });
         }
@@ -111,5 +112,10 @@ function renderPieces(piece, position) {
    
 }
 
-
-
+function convertIndexToPosition(index) {
+    const row = Math.floor(index / 8);
+    const col = index % 8;
+    const file = String.fromCharCode(97 + col); // Convert column to file (a-h)
+    const rank = 8 - row; // Convert row to rank (1-8)
+    return `${file}${rank}`;
+}
